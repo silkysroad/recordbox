@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>recordbox (beta)</title>
+<meta name="description" content="your life in albums. log, rate, and argue about music with people whose taste you actually trust.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0b0c;--bg2:#121214;--bg3:#1a1a1d;--line:#26262b;--ink:#f3f1ec;--mute:#8b8a91;--dim:#5b5a61;
+  --acc:#ff5a1f;--acc2:#c6ff3d;--star:#ffb703;--blue:#6ea8ff;
+  --r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:"Inter Tight",system-ui,sans-serif;font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.serif{font-family:"Instrument Serif",serif;font-weight:400}
+.mono{font-family:"JetBrains Mono",monospace}
+.wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+
+/* grain */
+body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:100;opacity:.05;
+background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* nav */
+nav{position:sticky;top:0;z-index:50;background:rgba(11,11,12,.82);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:26px;height:62px}
+.logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:19px;letter-spacing:-.04em}
+.logo .disc{width:24px;height:24px;border-radius:50%;background:radial-gradient(circle,var(--bg) 0 3px,var(--acc) 3.5px 5px,#222 5.5px 100%);box-shadow:inset 0 0 0 1px #333;animation:spin 4s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.beta{font:600 9px "JetBrains Mono";background:var(--acc2);color:#000;padding:2px 5px;border-radius:4px;letter-spacing:.05em}
+.navlinks{display:flex;gap:4px}
+.navlinks a{padding:7px 12px;border-radius:999px;color:var(--mute);font-weight:500;font-size:14px;transition:.15s}
+.navlinks a:hover{color:var(--ink)}
+.navlinks a.on{background:var(--bg3);color:var(--ink)}
+.search{flex:1;max-width:300px;margin-left:auto;position:relative}
+.search input{width:100%;background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:9px 14px 9px 34px;color:var(--ink);font:inherit;font-size:14px;outline:none}
+.search input:focus{border-color:#444}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.5}
+.logbtn{background:var(--ink);color:#000;font-weight:700;padding:9px 16px;border-radius:999px;font-size:14px;display:flex;gap:6px;align-items:center;transition:.15s}
+.logbtn:hover{background:var(--acc);color:#fff}
+.me{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#ff5a1f,#ffb703);display:grid;place-items:center;font-weight:800;color:#000;font-size:13px}
+
+/* album cover (generative) */
+.cover{position:relative;aspect-ratio:1;border-radius:6px;overflow:hidden;box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 10px 30px -12px rgba(0,0,0,.8);transition:transform .2s, box-shadow .2s;cursor:pointer;container-type:inline-size}
+.cover:hover{transform:translateY(-3px);box-shadow:0 0 0 2px var(--acc),0 18px 40px -14px rgba(0,0,0,.9)}
+.cover .t{position:absolute;inset:0;display:flex;padding:8%;line-height:.9}
+.cover .vinyl{position:absolute;inset:0}
+
+/* hero */
+.hero{padding-top:70px;padding-bottom:40px;position:relative}
+.hero h1{font-size:clamp(46px,7.6vw,104px);line-height:.88;letter-spacing:-.055em;font-weight:800;max-width:900px}
+.hero h1 em{font-family:"Instrument Serif";font-style:italic;font-weight:400;letter-spacing:-.02em;color:var(--acc)}
+.hero p{color:var(--mute);font-size:19px;max-width:560px;margin-top:22px}
+.hero .ctas{display:flex;gap:10px;margin-top:28px;flex-wrap:wrap}
+.btn{padding:13px 20px;border-radius:999px;font-weight:700;border:1px solid var(--line)}
+.btn.p{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn:hover{filter:brightness(1.12)}
+.marquee{margin-top:46px;overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.marquee .row{display:flex;gap:12px;width:max-content;animation:mq 60s linear infinite}
+.marquee .cover{width:130px;flex:none}
+@keyframes mq{to{transform:translateX(-50%)}}
+
+/* section */
+.sec{padding:44px 0;border-top:1px solid var(--line)}
+.sh{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px;gap:16px}
+.sh h2{font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.sh h2 b{color:var(--ink)}
+.sh a{font-size:13px;color:var(--mute)}
+.sh a:hover{color:var(--ink)}
+.big{font-size:clamp(30px,4vw,48px);letter-spacing:-.04em;font-weight:800;line-height:1}
+.big em{font-family:"Instrument Serif";font-style:italic;font-weight:400}
+
+/* grid */
+.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
+.item .meta{margin-top:8px;font-size:13px}
+.item .meta .a{color:var(--mute);font-size:12px}
+.stars{color:var(--star);letter-spacing:1px;font-size:12px}
+.chip{display:inline-flex;align-items:center;gap:5px;font:600 10px "JetBrains Mono";text-transform:uppercase;letter-spacing:.06em;padding:3px 7px;border-radius:5px;background:var(--bg3);color:var(--mute);border:1px solid var(--line)}
+.chip.v{color:var(--acc2);border-color:rgba(198,255,61,.25);background:rgba(198,255,61,.06)}
+.chip.o{color:var(--acc);border-color:rgba(255,90,31,.3);background:rgba(255,90,31,.07)}
+.chip.b{color:var(--blue);border-color:rgba(110,168,255,.3);background:rgba(110,168,255,.07)}
+
+/* layout two col */
+.two{display:grid;grid-template-columns:1.55fr 1fr;gap:34px}
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+
+/* feed */
+.feed{display:flex;flex-direction:column}
+.post{display:grid;grid-template-columns:76px 1fr;gap:16px;padding:18px 0;border-bottom:1px solid var(--line)}
+.post:first-child{padding-top:0}
+.post>div{min-width:0}
+.post .who{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--mute);flex-wrap:wrap}
+.av{width:22px;height:22px;border-radius:50%;display:inline-grid;place-items:center;font-size:10px;font-weight:800;color:#000;flex:none}
+.post .who b{color:var(--ink)}
+.post h3{font-size:18px;letter-spacing:-.02em;margin:5px 0 2px;font-weight:700}
+.post h3 span{color:var(--mute);font-weight:500}
+.post .rev{margin-top:8px;color:#d5d3cd;font-size:15px}
+.post .rev.serif{font-size:20px;line-height:1.2}
+.acts{display:flex;gap:16px;margin-top:10px;font-size:12px;color:var(--dim)}
+.acts button{display:flex;gap:5px;align-items:center;color:var(--dim);transition:.15s}
+.acts button:hover,.acts button.on{color:var(--acc)}
+.tracks-mini{display:flex;gap:3px;margin-top:10px;align-items:flex-end;height:26px}
+.tracks-mini i{flex:1;border-radius:2px;background:var(--bg3)}
+
+/* side widgets */
+.side{display:flex;flex-direction:column;gap:18px}
+.side h4{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);font-weight:600;margin-bottom:14px;display:flex;justify-content:space-between}
+.match{display:flex;align-items:center;gap:12px;padding:9px 0}
+.match .n{flex:1;font-size:14px}
+.match .n small{display:block;color:var(--dim);font-size:12px}
+.pct{font:700 15px "JetBrains Mono"}
+.bar{height:4px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-top:5px}
+.bar i{display:block;height:100%;border-radius:4px}
+
+/* divisive */
+.div-row{display:grid;grid-template-columns:44px 1fr 120px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px dashed var(--line)}
+.div-row:last-child{border:0}
+.div-row .cover{border-radius:4px}
+.hist{display:flex;align-items:flex-end;gap:2px;height:30px}
+.hist i{flex:1;background:var(--acc);border-radius:1px;opacity:.85}
+
+/* meta report */
+.meta-hero{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;margin-top:22px}
+.stat{background:var(--bg2);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.stat .k{font:600 10px "JetBrains Mono";letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.stat .v{font-size:40px;font-weight:800;letter-spacing:-.04em;margin-top:6px}
+.stat .d{font-size:12px;color:var(--mute)}
+.up{color:var(--acc2)}.dn{color:#ff6b6b}
+.chart-wrap{position:relative;height:260px}
+.lb{display:grid;grid-template-columns:28px 52px 1fr 90px 74px;gap:14px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.lb .rk{font:700 14px "JetBrains Mono";color:var(--dim)}
+.lb .nm b{display:block;font-size:15px}
+.lb .nm span{font-size:12px;color:var(--mute)}
+.lb .mv{font:600 12px "JetBrains Mono";text-align:right}
+
+/* album page */
+.ap{display:grid;grid-template-columns:320px 1fr;gap:44px;padding:44px 0}
+.ap .cover{cursor:default}
+.ap .cover:hover{transform:none;box-shadow:0 30px 70px -20px rgba(0,0,0,.9)}
+.ap h1{font-size:clamp(40px,6vw,76px);letter-spacing:-.05em;line-height:.9;font-weight:800}
+.ap .by{font-size:20px;color:var(--mute);margin-top:10px}
+.ap .by b{color:var(--ink)}
+.scorebox{display:flex;gap:30px;margin:26px 0;flex-wrap:wrap}
+.scorebox .s{min-width:110px}
+.scorebox .s .v{font-size:44px;font-weight:800;letter-spacing:-.04em;line-height:1}
+.scorebox .s .k{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin-top:6px}
+.rate{display:flex;gap:2px}
+.rate span{font-size:34px;color:#333;cursor:pointer;transition:.1s;line-height:1;position:relative}
+.rate span.on{color:var(--star)}
+.tl{margin-top:8px}
+.tr{display:grid;grid-template-columns:30px 1fr 150px 60px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+.tr .no{font:500 12px "JetBrains Mono";color:var(--dim)}
+.tr .tb{height:6px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.tr .tb i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--star))}
+.tr .sc{font:600 13px "JetBrains Mono";text-align:right}
+.tr .tags{display:flex;gap:6px}
+
+/* profile */
+.pf{padding:44px 0;display:grid;grid-template-columns:auto 1fr auto;gap:24px;align-items:center}
+.pf .bigav{width:110px;height:110px;border-radius:50%;background:linear-gradient(135deg,#ff5a1f,#ffb703);display:grid;place-items:center;font-size:42px;font-weight:900;color:#000}
+.pf h1{font-size:44px;letter-spacing:-.04em;font-weight:800;line-height:1}
+.pf .bio{color:var(--mute);margin-top:6px}
+.pf .nums{display:flex;gap:28px}
+.pf .nums div{text-align:center}
+.pf .nums b{display:block;font-size:26px;letter-spacing:-.03em}
+.pf .nums span{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.fav4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.heat{display:grid;grid-template-columns:repeat(52,1fr);gap:3px}
+.heat i{aspect-ratio:1;border-radius:2px;background:var(--bg3)}
+.dna{display:flex;height:42px;border-radius:8px;overflow:hidden}
+.dna div{display:flex;align-items:center;justify-content:center;font:600 10px "JetBrains Mono";color:#000;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;overflow:hidden}
+.drift{display:grid;grid-template-columns:44px 1fr auto;gap:14px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.drift .cover{border-radius:4px}
+.drift .ch{font:700 13px "JetBrains Mono"}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);z-index:200;display:none;place-items:center;padding:20px}
+.modal.on{display:grid;animation:fade .2s}
+@keyframes fade{from{opacity:0}}
+.sheet{background:var(--bg2);border:1px solid var(--line);border-radius:20px;width:min(620px,100%);padding:26px;animation:pop .25s cubic-bezier(.2,1.2,.4,1)}
+@keyframes pop{from{transform:scale(.95) translateY(10px);opacity:0}}
+.sheet .top{display:grid;grid-template-columns:110px 1fr;gap:18px}
+.sheet textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px;color:var(--ink);font:20px/1.3 "Instrument Serif";min-height:96px;margin-top:18px;resize:vertical;outline:none}
+.toggles{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.tg{padding:7px 12px;border-radius:999px;border:1px solid var(--line);font-size:13px;color:var(--mute);transition:.15s}
+.tg.on{background:var(--ink);color:#000;border-color:var(--ink);font-weight:600}
+.sheet .foot{display:flex;justify-content:space-between;align-items:center;margin-top:20px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--acc2);color:#000;font-weight:700;padding:12px 20px;border-radius:999px;z-index:300;transition:.3s cubic-bezier(.2,1.2,.4,1)}
+.toast.on{transform:translateX(-50%) translateY(0)}
+
+/* now playing */
+.np{display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg3);border-radius:12px}
+.np .cover{width:48px;border-radius:4px}
+.eq{display:flex;gap:2px;align-items:flex-end;height:14px}
+.eq i{width:3px;background:var(--acc2);animation:eq .9s ease-in-out infinite alternate}
+.eq i:nth-child(2){animation-delay:.2s}.eq i:nth-child(3){animation-delay:.4s}.eq i:nth-child(4){animation-delay:.1s}
+@keyframes eq{from{height:20%}to{height:100%}}
+
+.page{display:none}.page.on{display:block;animation:fade .3s}
+footer{border-top:1px solid var(--line);padding:30px 0 60px;color:var(--dim);font-size:13px;margin-top:40px}
+footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-top:22px}
+.vs > div{padding:22px}
+.vs > div:first-child{border-right:1px solid var(--line);color:var(--mute)}
+.vs h5{font:600 11px "JetBrains Mono";letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+.vs li{list-style:none;padding:7px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.vs li:last-child{border:0}
+.vs > div:last-child h5{color:var(--acc2)}
+
+@media (max-width:900px){
+  .grid{grid-template-columns:repeat(3,1fr)}
+  .two,.ap{grid-template-columns:1fr}
+  .ap .cover{max-width:300px}
+  .meta-hero{grid-template-columns:1fr 1fr}
+  .navlinks,.search{display:none}
+  .logbtn{margin-left:auto}
+  .pf{grid-template-columns:auto 1fr}.pf .nums{grid-column:1/-1}
+  .lb{grid-template-columns:24px 44px 1fr 64px}
+  .lb .mv{display:none}
+  .tr{grid-template-columns:24px 1fr 60px}.tr .tb{display:none}
+  .heat{grid-template-columns:repeat(26,1fr)}
+  .vs{grid-template-columns:1fr}.vs > div:first-child{border-right:0;border-bottom:1px solid var(--line)}
+}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a href="#home" class="logo"><span class="disc"></span>recordbox <span class="beta">BETA</span></a>
+  <div class="navlinks">
+    <a href="#home" data-nav="home">Home</a>
+    <a href="#meta" data-nav="meta">The Meta</a>
+    <a href="#album/brat" data-nav="album">Albums</a>
+    <a href="#profile" data-nav="profile">Profile</a>
+  </div>
+  <div class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input placeholder="albums, artists, people…" id="q"></div>
+  <button class="logbtn" onclick="openLog()">＋ Log</button>
+  <a href="#profile" class="me">SA</a>
+</div></nav>
+
+<!-- HOME -->
+<section class="page" id="p-home">
+  <div class="wrap hero">
+    <div class="chip v" style="margin-bottom:20px">● 2,481 albums logged in the last hour</div>
+    <h1>Your life <em>in albums.</em><br>Your taste, <em>verified.</em></h1>
+    <p>Log what you're listening to, rate every track, and see the real meta, from people who actually pressed play. Not a forum from 2004.</p>
+    <div class="ctas"><button class="btn p" onclick="openLog()">Log an album</button><a class="btn" href="#meta">See this week's meta →</a></div>
+  </div>
+  <div class="marquee"><div class="row" id="mq"></div></div>
+
+  <div class="wrap">
+    <div class="sec" style="margin-top:40px">
+      <div class="two">
+        <div>
+          <div class="sh"><h2><b>Friends</b> · what your circle is spinning</h2><a href="#">All activity</a></div>
+          <div class="feed" id="feed"></div>
+        </div>
+        <div class="side">
+          <div class="card">
+            <h4>On rotation now <span class="eq"><i></i><i></i><i></i><i></i></span></h4>
+            <div style="display:flex;flex-direction:column;gap:8px" id="rotation"></div>
+          </div>
+          <div class="card">
+            <h4>Taste match <span style="color:var(--dim)">you vs</span></h4>
+            <div id="matches"></div>
+          </div>
+          <div class="card">
+            <h4>Most divisive this week <span style="color:var(--dim)">spread</span></h4>
+            <div id="divisive"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sh"><h2><b>Popular with friends</b> · this week</h2><a href="#meta">The Meta →</a></div>
+      <div class="grid" id="popgrid"></div>
+    </div>
+
+    <div class="sec">
+      <div class="big">Rateyourmusic is a library.<br><em>recordbox is a scene.</em></div>
+      <div class="vs">
+        <div><h5>The old way</h5><ul>
+          <li>Anyone can rate anything, listened or not</li>
+          <li>One score per album, frozen forever</li>
+          <li>Taste set by 40 power users in 2009</li>
+          <li>Genre trees with 1,400 branches</li>
+          <li>Looks like a spreadsheet</li></ul></div>
+        <div><h5>recordbox</h5><ul>
+          <li><b>Verified listens</b>: synced from Spotify, Apple Music, Last.fm</li>
+          <li><b>Track ratings + relistens</b>: see how a score ages</li>
+          <li><b>The Meta</b>: what's rising, what's divisive, what's aging badly</li>
+          <li><b>Taste match</b>: find your people, not just your genre</li>
+          <li><b>Fav 4 + receipts</b>: a profile that's actually you</li></ul></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- META -->
+<section class="page" id="p-meta">
+  <div class="wrap" style="padding-top:44px">
+    <div class="chip o">● live · week 43</div>
+    <h1 class="big" style="font-size:clamp(44px,7vw,88px);margin-top:14px">The Meta<em>.</em></h1>
+    <p style="color:var(--mute);font-size:18px;max-width:600px;margin-top:10px">What music people are actually listening to, rating, and fighting about this week. Weighted by verified listens, not vibes.</p>
+
+    <div class="meta-hero">
+      <div class="stat"><div class="k">Logs this week</div><div class="v">412K</div><div class="d"><span class="up">▲ 18%</span> vs last week</div></div>
+      <div class="stat"><div class="k">Verified listen rate</div><div class="v">87%</div><div class="d">RYM: unknowable</div></div>
+      <div class="stat"><div class="k">Avg relistens / logged LP</div><div class="v">3.4</div><div class="d"><span class="up">▲ 0.6</span> loyalty is back</div></div>
+      <div class="stat"><div class="k">Hottest take</div><div class="v" style="font-size:22px;line-height:1.1;margin-top:12px">"GNX is a better album than DAMN."</div><div class="d">1,204 agree · 1,198 don't</div></div>
+    </div>
+
+    <div class="sec" style="margin-top:34px">
+      <div class="two">
+        <div>
+          <div class="sh"><h2><b>The chart</b> · momentum, not totals</h2><a href="#">all-time →</a></div>
+          <div id="leader"></div>
+        </div>
+        <div class="side">
+          <div class="card">
+            <h4>Score over time <span style="color:var(--dim)">how takes age</span></h4>
+            <canvas id="ageChart" height="220"></canvas>
+            <div style="display:flex;gap:14px;font-size:12px;margin-top:10px;flex-wrap:wrap" id="ageLegend"></div>
+          </div>
+          <div class="card">
+            <h4>Genre weather</h4>
+            <div id="weather"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sh"><h2><b>Aging badly</b> · biggest score drops since release</h2></div>
+      <div class="grid" id="aging"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ALBUM -->
+<section class="page" id="p-album"><div class="wrap" id="albumWrap"></div></section>
+
+<!-- PROFILE -->
+<section class="page" id="p-profile">
+  <div class="wrap">
+    <div class="pf">
+      <div class="bigav">S</div>
+      <div><h1>sami</h1><div class="bio">nyc ↔ miami · if it doesn't have a bridge i'm not listening · <span class="chip v">✓ spotify synced</span></div></div>
+      <div class="nums"><div><b>612</b><span>albums</span></div><div><b>48</b><span>this year</span></div><div><b>1.2k</b><span>followers</span></div><div><b>3.9</b><span>avg</span></div></div>
+    </div>
+
+    <div class="sec">
+      <div class="sh"><h2><b>Fav 4</b></h2><a href="#">edit</a></div>
+      <div class="fav4" id="fav4"></div>
+    </div>
+
+    <div class="sec">
+      <div class="two">
+        <div>
+          <div class="sh"><h2><b>Listening diary</b> · 2026</h2><span class="mono" style="font-size:12px;color:var(--dim)">longest streak 41 days</span></div>
+          <div class="heat" id="heat"></div>
+          <div class="sh" style="margin-top:34px"><h2><b>Taste DNA</b></h2></div>
+          <div class="dna" id="dna"></div>
+          <p style="color:var(--mute);font-size:14px;margin-top:12px">You're a <b style="color:var(--ink)">Late-Night Maximalist</b>. You rate hyperpop 0.8★ above the crowd and you've never given a jam band more than 2★. Rarest trait: top 3% for Ethio-jazz.</p>
+        </div>
+        <div>
+          <div class="sh"><h2><b>Rating drift</b> · how your takes aged</h2></div>
+          <div id="drift"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap"><div><b style="color:var(--ink)">recordbox</b> · private beta · built for people who argue about tracklists</div><div class="mono">v0.3.1-beta</div></div></footer>
+
+<!-- LOG MODAL -->
+<div class="modal" id="modal" onclick="if(event.target===this)closeLog()">
+  <div class="sheet">
+    <div class="top">
+      <div id="logCover"></div>
+      <div>
+        <div class="chip v">✓ verified · played 3x this week</div>
+        <h3 style="font-size:26px;letter-spacing:-.03em;margin-top:10px" id="logTitle"></h3>
+        <div style="color:var(--mute)" id="logArtist"></div>
+        <div class="rate" id="logRate" style="margin-top:12px"></div>
+      </div>
+    </div>
+    <textarea placeholder="say something. or don't."></textarea>
+    <div class="toggles">
+      <button class="tg on" onclick="this.classList.toggle('on')">First listen</button>
+      <button class="tg" onclick="this.classList.toggle('on')">Relisten</button>
+      <button class="tg" onclick="this.classList.toggle('on')">♥ Love</button>
+      <button class="tg" onclick="this.classList.toggle('on')">On vinyl</button>
+      <button class="tg" onclick="this.classList.toggle('on')">Hot take 🔥</button>
+      <button class="tg" onclick="this.classList.toggle('on')">Contains spoilers (it's a concept album)</button>
+    </div>
+    <div class="foot"><span style="color:var(--dim);font-size:13px">Rate tracks after logging →</span><button class="btn p" onclick="saveLog()">Log it</button></div>
+  </div>
+</div>
+<div class="toast" id="toast">Logged. Your taste match with Maya went up 2%.</div>
+
+<script>
+// ---------- DATA ----------
+const A = {
+  brat:{t:"BRAT",a:"Charli xcx",y:2024,g:"hyperpop",bg:"#8ace00",fg:"#000",style:"brat",avg:4.21,tracks:["360","Club classics","Sympathy is a knife","I might say something stupid","Talk talk","Von dutch","Everything is romantic","Rewind","So I","Girl, so confusing","Apple","B2b","Mean girls","I think about it all the time","365"]},
+  gnx:{t:"GNX",a:"Kendrick Lamar",y:2024,g:"hip-hop",bg:"#111",fg:"#e7e2d4",style:"gnx",avg:4.08,tracks:["wacced out murals","squabble up","luther","man at the garden","hey now","reincarnated","tv off","dodger blue","peekaboo","heart pt. 6","gnx","gloria"]},
+  charm:{t:"Charm",a:"Clairo",y:2024,g:"soft rock",bg:"#c9a27a",fg:"#3b2a1d",style:"serif",avg:3.94,tracks:["Nomad","Sexy to Someone","Second Nature","Slow Dance","Thank You","Terrapin","Juna","Add Up My Love","Echo","Glory of the Snow","Pier 4"]},
+  chromakopia:{t:"CHROMAKOPIA",a:"Tyler, The Creator",y:2024,g:"hip-hop",bg:"#2e3b1f",fg:"#e8f070",style:"stamp",avg:3.97,tracks:["St. Chroma","Rah Tah Tah","Noid","Darling, I","Hey Jane","I Killed You","Judge Judy","Sticky","Take Your Mask Off","Tomorrow","Thought I Was Dead","Like Him","Balloon","I Hope You Find Your Way Home"]},
+  dtmf:{t:"DeBÍ TiRAR MáS FOToS",a:"Bad Bunny",y:2025,g:"reggaeton",bg:"#f2ece0",fg:"#1a1a1a",style:"chairs",avg:4.17,tracks:["NUEVAYoL","VOY A LLeVARTE PA PR","BAILE INoLVIDABLE","PERFuMITO NUEVO","WELTiTA","VeLDÁ","EL CLúB","KETU TeCRÉ","BOKeTE","KLOuFRENS","TURiSTA","CAFé CON RON","PIToRRO DE COCO","LO QUE LE PASÓ A HAWAii","EoO","DtMF","LA MuDANZA"]},
+  alligator:{t:"Alligator Bites Never Heal",a:"Doechii",y:2024,g:"hip-hop",bg:"#3d4a2a",fg:"#f4e9c8",style:"swamp",avg:4.02,tracks:["STANKA POOH","BOOM BAP","DENIAL IS A RIVER","CATFISH","NISSAN ALTIMA","HIDE N SEEK","BULLFROG","SKIPP","WAIT","GTFO","BOILED PEANUTS","SLIDE","FIREFLIES","NOSEBLEEDS"]},
+  twostar:{t:"Two Star & the Dream Police",a:"Mk.gee",y:2024,g:"art pop",bg:"#5a1a14",fg:"#ffcf9e",style:"blur",avg:3.88,tracks:["New Low","DNM","Alesis","Are You Looking Up","I Want","Breakthespell","How many miles","Candy","Rylee & I","Dream Police","You","Long Gone"]},
+  eusexua:{t:"EUSEXUA",a:"FKA twigs",y:2025,g:"electronic",bg:"#c8d4dc",fg:"#0d0d10",style:"chrome",avg:3.81,tracks:["Eusexua","Perfect Stranger","Room of Fools","Girl Feels Good","Drums of Death","Keep It, Hold It","Sticky","Striptease","Childlike Things","Wanderlust","24hr Dog"]},
+  mayhem:{t:"MAYHEM",a:"Lady Gaga",y:2025,g:"pop",bg:"#1b1b1b",fg:"#ff2a2a",style:"glitch",avg:3.76,tracks:["Disease","Abracadabra","Garden of Eden","Perfect Celebrity","Vanish into You","Killah","Zombieboy","LoveDrug","How Bad Do U Want Me","Don't Call Tonight","Shadow of a Man","The Beast","Blade of Grass","Die with a Smile"]},
+  music:{t:"MUSIC",a:"Playboi Carti",y:2025,g:"rage",bg:"#000",fg:"#ff1b1b",style:"rage",avg:3.12,tracks:["POP OUT","CRUSH","K POP","EVIL J0RDAN","MOJO JOJO","PHILLY","RADAR","RATHER LIE","FINE SHIT","BACKD00R","TOXIC","MUNYUN","CRANK","CHARGE DEM HOES A FEE","GOOD CREDIT","I SEEEEEE YOU BABY BOI","WAKE UP F1LTHY","JUMPIN","TRIM","COCAINE NOSE","WE NEED ALL DA VIBES","OLYMPIAN","OPM BABI","TWIN TRIM","LIKE WEEZY","DIS 1 GOT IT","WALK","HBA","DIE TRYING","SOME MORE","KETAMINE"]},
+  getting:{t:"Getting Killed",a:"Geese",y:2025,g:"indie rock",bg:"#d9442b",fg:"#fff4e0",style:"block",avg:4.11,tracks:["Trinidad","Cobra","Husbands","Getting Killed","Au Pays du Cocaine","100 Horses","Islands of Men","Taxes","Bow Down","Half Real","Long Island City Here I Come"]},
+  lux:{t:"LUX",a:"ROSALÍA",y:2025,g:"art pop",bg:"#f7f5f0",fg:"#9a8a6a",style:"lux",avg:4.24,tracks:["Sexo, Violencia y Llantas","Reliquia","Divinize","Porcelana","Mio Cristo Piange Diamanti","Berghain","La Perla","Mundo Nuevo","De Madrugá","Dios Es Un Stalker","La Yugular","Focu 'ranni","Sauvignon Blanc","Jeanne","Novia Robot","Memória","Magnolias"]},
+  clipse:{t:"Let God Sort Em Out",a:"Clipse",y:2025,g:"hip-hop",bg:"#1d1a17",fg:"#d8c39a",style:"gnx",avg:4.15,tracks:["The Birds Don't Sing","Ace Trumpets","Chains & Whips","M.T.B.T.T.F.","So Be It","P.O.V.","All Things Considered","So Far Ahead","By the Grace of God","E.B.I.T.D.A.","Inglorious Bastards","F.I.C.O.","Let God Sort Em Out/Chandeliers"]},
+  romance:{t:"Romance",a:"Fontaines D.C.",y:2024,g:"post-punk",bg:"#ff6fb5",fg:"#1a0f1a",style:"stamp",avg:3.92,tracks:["Romance","Starburster","Here's the Thing","Desire","In the Modern World","Bug","Motorcycle Boy","Sundowner","Horseness Is the Whatness","Death Kink","Favourite"]},
+  tigers:{t:"Tigers Blood",a:"Waxahatchee",y:2024,g:"country",bg:"#e2c26a",fg:"#3b2410",style:"serif",avg:3.89,tracks:["3 Sisters","Evil Spawn","Ice Cold","Right Back to It","Bored","Lone Star Lake","Crimes of the Heart","Crowbar","365","Burns Out at Midnight","Tigers Blood","The Wolves"]},
+  shortn:{t:"Short n' Sweet",a:"Sabrina Carpenter",y:2024,g:"pop",bg:"#6bb7e8",fg:"#fff",style:"serif",avg:3.71,tracks:["Taste","Please Please Please","Good Graces","Sharpest Tool","Coincidence","Bed Chem","Espresso","Dumb & Poetic","Slim Pickins","Juno","Lie to Girls","Don't Smile"]},
+  ethio:{t:"Éthiopiques Vol. 4",a:"Mulatu Astatke",y:1998,g:"ethio-jazz",bg:"#b8451e",fg:"#f6d27a",style:"block",avg:4.33,tracks:["Yèkatit","Netsanet","Kasalèfkut-hulu","Dèwèl","Yègellé tezeta","Tezeta","Gubèlyé","Yèzèmèd yèbaed","Munayé","Lebkèrsh","Asmarina","Ebo Lala"]},
+  blonde:{t:"Blonde",a:"Frank Ocean",y:2016,g:"r&b",bg:"#d7d2c8",fg:"#111",style:"blonde",avg:4.38,tracks:["Nikes","Ivy","Pink + White","Be Yourself","Solo","Skyline To","Self Control","Good Guy","Nights","Solo (Reprise)","Pretty Sweet","Facebook Story","Close to You","White Ferrari","Seigfried","Godspeed","Futura Free"]},
+};
+const P = {
+  maya:{n:"maya",c:"#c6ff3d"}, dev:{n:"dev",c:"#6ea8ff"}, jules:{n:"jules",c:"#ff8fd1"},
+  tomi:{n:"tomi",c:"#ffb703"}, rocco:{n:"rocco",c:"#ff5a1f"}, nina:{n:"nina",c:"#b69cff"}
+};
+
+// ---------- COVER ART (generative, no image files) ----------
+function seed(s){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))|0;return()=>((h=(h*1103515245+12345)|0)>>>0)/4294967296}
+function cover(id,extra=""){
+  const x=A[id],r=seed(id);let inner="";
+  const T=x.t;
+  switch(x.style){
+    case"brat":inner=`<div class="t" style="align-items:center;justify-content:center;font:400 22cqw Arial,sans-serif;letter-spacing:-.03em;color:#000;filter:blur(.4cqw)">${T.toLowerCase()}</div>`;break;
+    case"gnx":inner=`<div class="vinyl" style="background:radial-gradient(120% 70% at 50% 110%,${x.fg}22,transparent 60%)"></div><div class="t" style="flex-direction:column;justify-content:flex-end;color:${x.fg}"><div style="font:900 ${T.length>5?11:30}cqw 'Inter Tight';letter-spacing:-.06em">${T}</div><div style="font:500 5cqw 'JetBrains Mono';opacity:.6;margin-top:3cqw">${x.a.toUpperCase()}</div></div>`;break;
+    case"serif":inner=`<div class="vinyl" style="background:radial-gradient(circle at 30% 30%,#fff5,transparent 55%)"></div><div class="t" style="align-items:flex-end;color:${x.fg};font:italic 400 ${T.length>8?14:19}cqw 'Instrument Serif'">${T}</div>`;break;
+    case"stamp":inner=`<div class="t" style="align-items:center;justify-content:center"><div style="border:1.2cqw solid ${x.fg};color:${x.fg};padding:4cqw 5cqw;font:900 ${T.length>8?7.5:16}cqw 'Inter Tight';letter-spacing:.02em;transform:rotate(-4deg)">${T}</div></div>`;break;
+    case"chairs":inner=`<div class="vinyl" style="background:linear-gradient(transparent 62%,#5a8f3a 62%)"></div><div style="position:absolute;left:30%;bottom:30%;width:15%;height:22%;background:#fff;border:.8cqw solid #ddd;border-radius:2cqw 2cqw 0 0"></div><div style="position:absolute;left:52%;bottom:30%;width:15%;height:22%;background:#fff;border:.8cqw solid #ddd;border-radius:2cqw 2cqw 0 0"></div><div class="t" style="color:${x.fg};font:800 6.5cqw 'Inter Tight';letter-spacing:-.02em">${T}</div>`;break;
+    case"swamp":inner=`<div class="vinyl" style="background:repeating-linear-gradient(170deg,${x.fg}10 0 3cqw,transparent 3cqw 7cqw),radial-gradient(circle at 70% 70%,#7a8f3a,transparent 60%)"></div><div class="t" style="flex-direction:column;justify-content:space-between;color:${x.fg}"><b style="font:900 13cqw 'Inter Tight';letter-spacing:-.05em">DOECHII</b><span style="font:italic 9cqw 'Instrument Serif'">${T}</span></div>`;break;
+    case"blur":inner=`<div class="vinyl" style="background:radial-gradient(circle at ${30+r()*40}% ${30+r()*40}%,${x.fg},transparent 50%);filter:blur(4cqw)"></div><div class="t" style="align-items:flex-end;color:${x.fg};font:600 7cqw 'Inter Tight';opacity:.85">${T.toLowerCase()}</div>`;break;
+    case"chrome":inner=`<div class="vinyl" style="background:linear-gradient(160deg,#fff 0%,#9aa7b0 30%,#eef3f6 48%,#5d6870 70%,#dfe6ea 100%)"></div><div class="t" style="align-items:center;justify-content:center;color:${x.fg};font:300 14cqw 'Inter Tight';letter-spacing:.12em">${T}</div>`;break;
+    case"glitch":inner=`<div class="t" style="flex-direction:column;justify-content:center;font:900 22cqw 'Inter Tight';letter-spacing:-.06em;color:${x.fg};text-shadow:1.5cqw 0 #00e5ff,-1.5cqw 0 #ff00c8">${T}</div>`;break;
+    case"rage":inner=`<div class="vinyl" style="background:repeating-linear-gradient(0deg,#ff1b1b22 0 .6cqw,transparent .6cqw 2.4cqw)"></div><div class="t" style="align-items:center;justify-content:center;font:900 24cqw 'Inter Tight';color:${x.fg};letter-spacing:-.08em;transform:scaleY(1.4)">${T}</div>`;break;
+    case"block":inner=`<div class="vinyl" style="background:linear-gradient(90deg,transparent 60%,#0003 60%),linear-gradient(transparent 60%,#0002 60%)"></div><div class="t" style="flex-direction:column;justify-content:flex-start;color:${x.fg}"><b style="font:900 ${T.length>10?10:15}cqw 'Inter Tight';letter-spacing:-.05em;line-height:.88">${T}</b><span style="font:500 5cqw 'JetBrains Mono';margin-top:3cqw;opacity:.8">${x.a}</span></div>`;break;
+    case"lux":inner=`<div class="vinyl" style="background:radial-gradient(circle at 50% 45%,#fff,#e9e4d8 60%,#cfc6b0)"></div><div class="t" style="align-items:center;justify-content:center;font:italic 30cqw 'Instrument Serif';color:${x.fg};letter-spacing:.04em">${T}</div>`;break;
+    case"blonde":inner=`<div class="vinyl" style="background:linear-gradient(180deg,#e9e6df,#b8b2a6)"></div><div class="t" style="align-items:flex-start;justify-content:flex-end;color:#111;font:500 9cqw 'Inter Tight';letter-spacing:.02em">blond</div>`;break;
+  }
+  return `<div class="cover" style="background:${x.bg}" onclick="location.hash='album/${id}'" ${extra}>${inner}</div>`;
+}
+const st=v=>{let s="",f=Math.floor(v);for(let i=0;i<f;i++)s+="★";if(v-f>=.5)s+="½";return s};
+const av=p=>`<span class="av" style="background:${P[p].c}">${P[p].n[0].toUpperCase()}</span>`;
+
+// ---------- HOME ----------
+const marqIds=Object.keys(A);
+document.getElementById("mq").innerHTML=[...marqIds,...marqIds].map(i=>cover(i)).join("");
+
+const posts=[
+  {p:"maya",id:"lux",r:5,tag:["v","relisten #9"],when:"12m",txt:"rosalía said 'what if the pope had a lana phase' and then delivered. Berghain is the track of the decade and i will not be taking questions.",serif:true,likes:214,c:31},
+  {p:"rocco",id:"music",r:2,tag:["o","hot take"],when:"40m",txt:"30 tracks. 11 bangers. carti made the best 35 minute album of the year and hid it inside a 77 minute one.",likes:891,c:204},
+  {p:"dev",id:"getting",r:4.5,tag:["v","first listen"],when:"1h",txt:"the most nyc record since Is This It and it's not even trying. Au Pays du Cocaine on the BQE at 2am. that's the review.",likes:142,c:12},
+  {p:"jules",id:"brat",r:4,tag:["b","re-rated ↓ from 5"],when:"3h",txt:"brat summer is over. the album is still great. but i gave it 5 stars while drunk at a party in a lime green tank top and that was not a sober rating.",serif:true,likes:533,c:77},
+  {p:"tomi",id:"dtmf",r:5,tag:["v","on vinyl"],when:"5h",txt:"played this for my grandmother. she cried at DtMF. i cried at her crying. 5 stars for the family group chat.",likes:302,c:19},
+];
+document.getElementById("feed").innerHTML=posts.map(x=>{
+  const al=A[x.id];const bars=al.tracks.slice(0,16).map((_,i)=>{const s=seed(x.id+i)();return `<i style="height:${25+s*75}%;background:${s>.7?'var(--acc)':'#2c2c31'}"></i>`}).join("");
+  return `<div class="post">${cover(x.id)}<div>
+    <div class="who">${av(x.p)}<b>${P[x.p].n}</b> logged <span class="stars">${st(x.r)}</span> <span class="chip ${x.tag[0]}">${x.tag[1]}</span> <span style="margin-left:auto;color:var(--dim)">${x.when}</span></div>
+    <h3><a href="#album/${x.id}">${al.t}</a> <span>${al.a} · ${al.y}</span></h3>
+    <div class="rev ${x.serif?'serif':''}">${x.txt}</div>
+    <div class="tracks-mini" title="track ratings">${bars}</div>
+    <div class="acts"><button onclick="this.classList.toggle('on')">♥ ${x.likes}</button><button>💬 ${x.c}</button><button>↻ agree</button><button>⚔ disagree</button></div>
+  </div></div>`}).join("");
+
+const rot=[["maya","lux","Berghain",47],["dev","getting","Trinidad",31],["nina","eusexua","Perfect Stranger",22]];
+document.getElementById("rotation").innerHTML=rot.map(([p,id,tr,n])=>`<div class="np">${cover(id)}<div style="flex:1;font-size:13px"><b>${tr}</b><div style="color:var(--mute);font-size:12px">${av(p)} ${P[p].n} · ${n} plays this week</div></div></div>`).join("");
+
+const m=[["maya",94,"you both rate art pop way too high"],["dev",81,"split on Carti, united on Geese"],["jules",67,"she's a pop girl. you're a pop girl in denial"],["rocco",23,"do not let him pick the aux"]];
+document.getElementById("matches").innerHTML=m.map(([p,v,s])=>`<div class="match">${av(p)}<div class="n">${P[p].n}<small>${s}</small><div class="bar"><i style="width:${v}%;background:${v>75?'var(--acc2)':v>50?'var(--star)':'#ff6b6b'}"></i></div></div><span class="pct" style="color:${v>75?'var(--acc2)':v>50?'var(--star)':'#ff6b6b'}">${v}%</span></div>`).join("");
+
+const dv=[["music",[9,3,2,2,3,4,6,8,10,11]],["mayhem",[2,3,5,8,9,8,6,4,6,7]],["chromakopia",[1,2,2,4,6,9,10,7,8,9]]];
+document.getElementById("divisive").innerHTML=dv.map(([id,h])=>`<div class="div-row">${cover(id)}<div style="font-size:13px"><b>${A[id].t}</b><div style="color:var(--mute);font-size:12px">${A[id].a}</div></div><div class="hist">${h.map(v=>`<i style="height:${v*10}%"></i>`).join("")}</div></div>`).join("");
+
+const pop=[["lux",4,"maya, tomi +4"],["getting",4.5,"dev +6"],["clipse",4.5,"tomi +3"],["dtmf",5,"tomi, nina +5"],["twostar",4,"jules +2"],["romance",3.5,"rocco +1"]];
+document.getElementById("popgrid").innerHTML=pop.map(([id,r,w])=>`<div class="item">${cover(id)}<div class="meta"><div>${A[id].t}</div><div class="a">${A[id].a}</div><div class="stars">${st(A[id].avg)} <span style="color:var(--dim);font-size:11px">${w}</span></div></div></div>`).join("");
+
+// ---------- META ----------
+const lb=[["lux","+214%","▲ 3","new #1. Berghain clip did 40M views"],["getting","+96%","▲ 7","word of mouth, zero marketing"],["dtmf","+41%","—","still the floor of every party"],["clipse","+38%","▲ 2","dads and their sons, united"],["music","−12%","▼ 4","the backlash to the backlash"],["twostar","+71%","▲ 11","your guitarist friend found it"],["alligator","+19%","▲ 1","post-Grammy long tail"],["ethio","+302%","NEW","someone sampled Yègellé tezeta"]];
+document.getElementById("leader").innerHTML=lb.map(([id,mo,mv,why],i)=>`<div class="lb"><span class="rk">${String(i+1).padStart(2,"0")}</span>${cover(id)}<div class="nm"><b>${A[id].t}</b><span>${A[id].a} · ${why}</span></div><span class="mono" style="font-weight:700;color:${mo[0]=="+"?"var(--acc2)":"#ff6b6b"}">${mo}</span><span class="mv" style="color:${mv[0]=="▲"||mv=="NEW"?"var(--acc2)":mv[0]=="▼"?"#ff6b6b":"var(--dim)"}">${mv}</span></div>`).join("");
+
+const W=[["hyperpop","cooling","☁",-8],["art pop","heatwave","☀",+22],["indie rock","warming","⛅",+14],["rage","storm","⛈",-11],["country","steady","🌤",+3],["ethio-jazz","freak front","🌪",+48]];
+document.getElementById("weather").innerHTML=W.map(([g,s,i,d])=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:14px"><span style="font-size:18px">${i}</span><b style="flex:1">${g}</b><span style="color:var(--mute);font-size:12px">${s}</span><span class="mono" style="width:44px;text-align:right;font-size:12px;color:${d>0?'var(--acc2)':'#ff6b6b'}">${d>0?"+":""}${d}%</span></div>`).join("");
+
+document.getElementById("aging").innerHTML=[["brat","4.48 → 4.21"],["shortn","3.96 → 3.71"],["mayhem","4.02 → 3.76"],["music","3.40 → 3.12"],["chromakopia","4.15 → 3.97"],["eusexua","3.94 → 3.81"]].map(([id,d])=>`<div class="item">${cover(id)}<div class="meta"><div>${A[id].t}</div><div class="a">${A[id].a}</div><div class="mono" style="font-size:12px;color:#ff6b6b">${d}</div></div></div>`).join("");
+
+function drawAge(){
+  const c=document.getElementById("ageChart");if(!c||!c.offsetWidth)return;
+  const dpr=devicePixelRatio||1,w=c.offsetWidth,h=220;c.width=w*dpr;c.height=h*dpr;c.style.height=h+"px";
+  const x=c.getContext("2d");x.scale(dpr,dpr);
+  const series=[["BRAT","#8ace00",[4.1,4.4,4.5,4.48,4.42,4.35,4.3,4.25,4.22,4.21]],["GNX","#e7e2d4",[3.9,4.0,4.05,4.1,4.12,4.1,4.09,4.08,4.08,4.08]],["Getting Killed","#ff5a1f",[3.8,3.86,3.95,4.0,4.04,4.07,4.09,4.1,4.11,4.11]]];
+  const lo=3.7,hi=4.6,pad=26;
+  x.strokeStyle="#26262b";x.fillStyle="#5b5a61";x.font="10px JetBrains Mono";x.lineWidth=1;
+  for(let v=3.8;v<=4.6;v+=.2){const y=h-pad-(v-lo)/(hi-lo)*(h-pad*2);x.beginPath();x.moveTo(30,y);x.lineTo(w,y);x.stroke();x.fillText(v.toFixed(1),0,y+3)}
+  ["wk1","","","mo3","","","mo6","","","now"].forEach((l,i)=>{x.textAlign=i==9?"right":"left";x.fillText(l,30+i*(w-40)/9,h-6)});x.textAlign="left";
+  series.forEach(([n,col,d])=>{x.strokeStyle=col;x.lineWidth=2.4;x.lineJoin="round";x.beginPath();d.forEach((v,i)=>{const X=30+i*(w-40)/9,Y=h-pad-(v-lo)/(hi-lo)*(h-pad*2);i?x.lineTo(X,Y):x.moveTo(X,Y)});x.stroke();
+    const X=30+9*(w-40)/9,Y=h-pad-(d[9]-lo)/(hi-lo)*(h-pad*2);x.fillStyle=col;x.beginPath();x.arc(X-2,Y,3.5,0,7);x.fill()});
+  document.getElementById("ageLegend").innerHTML=series.map(([n,c])=>`<span style="display:flex;gap:6px;align-items:center"><i style="width:10px;height:3px;background:${c};border-radius:2px"></i>${n}</span>`).join("");
+}
+
+// ---------- ALBUM ----------
+let myRating=0;
+function renderAlbum(id){
+  const x=A[id]||A.brat;const r=seed(id+"tr");
+  const scores=x.tracks.map(()=>Math.min(5,Math.max(2.2,x.avg+(r()-.5)*1.6)));
+  const best=scores.indexOf(Math.max(...scores)),skip=scores.indexOf(Math.min(...scores));
+  const logs=Math.floor(40+r()*200)+"K",rel=(2+r()*4).toFixed(1),ver=Math.floor(80+r()*16);
+  document.getElementById("albumWrap").innerHTML=`<div class="ap"><div>${cover(id)}
+    <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap"><span class="chip">${x.g}</span><span class="chip">${x.y}</span><span class="chip">${x.tracks.length} tracks</span></div>
+    <button class="btn p" style="width:100%;margin-top:16px" onclick="openLog('${id}')">＋ Log or review</button>
+    <button class="btn" style="width:100%;margin-top:8px">▶ Open in Spotify</button>
+  </div><div>
+    <h1>${x.t}</h1><div class="by">by <b>${x.a}</b></div>
+    <div class="scorebox">
+      <div class="s"><div class="v" style="color:var(--star)">${x.avg.toFixed(2)}</div><div class="k">recordbox avg</div></div>
+      <div class="s"><div class="v">${logs}</div><div class="k">logs</div></div>
+      <div class="s"><div class="v">${rel}</div><div class="k">avg relistens</div></div>
+      <div class="s"><div class="v up">${ver}%</div><div class="k">verified listens</div></div>
+      <div class="s"><div class="k" style="margin-top:0;margin-bottom:8px">your rating</div><div class="rate" id="albRate"></div></div>
+    </div>
+    <div class="card" style="display:flex;gap:14px;align-items:center;margin-bottom:26px">${av("maya")}<div style="font-size:14px;flex:1"><b>Friends avg ${st(Math.min(5,x.avg+.3))}</b> <span style="color:var(--mute)">· maya, dev, and 4 others logged this</span></div><span class="chip v">94% taste match</span></div>
+    <div class="sh"><h2><b>Track by track</b> · community scores</h2><span class="mono" style="font-size:12px;color:var(--dim)">tap to rate</span></div>
+    <div class="tl">${x.tracks.map((t,i)=>`<div class="tr"><span class="no">${String(i+1).padStart(2,"0")}</span><span>${t} ${i==best?'<span class="chip v">consensus best</span>':''}${i==skip?' <span class="chip o">the skip</span>':''}</span><span class="tb"><i style="width:${scores[i]/5*100}%"></i></span><span class="sc">${scores[i].toFixed(1)}</span></div>`).join("")}</div>
+  </div></div>`;
+  mkRate("albRate",myRating,v=>{myRating=v;toast(`Rated ${x.t} ${st(v)}. Friends avg moved to ${(x.avg+.2).toFixed(2)}.`)});
+}
+function mkRate(el,val,cb){
+  const box=document.getElementById(el);box.innerHTML="";
+  for(let i=1;i<=5;i++){const s=document.createElement("span");s.textContent="★";s.className=i<=val?"on":"";
+    s.onmouseenter=()=>[...box.children].forEach((c,j)=>c.classList.toggle("on",j<i));
+    s.onclick=()=>{val=i;cb&&cb(i)};box.appendChild(s)}
+  box.onmouseleave=()=>[...box.children].forEach((c,j)=>c.classList.toggle("on",j<val));
+}
+
+// ---------- PROFILE ----------
+document.getElementById("fav4").innerHTML=["blonde","ethio","lux","getting"].map(id=>`<div class="item">${cover(id)}<div class="meta"><div>${A[id].t}</div><div class="a">${A[id].a}</div></div></div>`).join("");
+document.getElementById("heat").innerHTML=Array.from({length:364},(_,i)=>{const r=seed("h"+i)();const lv=r>.92?1:r>.75?.7:r>.5?.4:r>.3?.18:0;return `<i style="${lv?`background:rgba(255,90,31,${lv})`:""}"></i>`}).join("");
+document.getElementById("dna").innerHTML=[["art pop",28,"#c6ff3d"],["hip-hop",22,"#ffb703"],["ethio-jazz",14,"#ff5a1f"],["r&b",13,"#ff8fd1"],["indie",12,"#6ea8ff"],["other",11,"#3a3a40"]].map(([n,w,c])=>`<div style="width:${w}%;background:${c};${n=="other"?"color:#aaa":""}">${n} ${w}%</div>`).join("");
+document.getElementById("drift").innerHTML=[["brat","5.0","4.0","sobered up"],["blonde","3.5","5.0","took 6 years. classic."],["music","1.5","3.0","carti was right, again"],["shortn","4.0","3.0","espresso fatigue"],["twostar","3.0","4.5","it clicked on a plane"]].map(([id,a,b,n])=>`<div class="drift">${cover(id)}<div style="font-size:14px"><b>${A[id].t}</b><div style="color:var(--mute);font-size:12px">${n}</div></div><span class="ch" style="color:${+b>+a?'var(--acc2)':'#ff6b6b'}">${a} → ${b}</span></div>`).join("");
+
+// ---------- LOG MODAL ----------
+let logId="lux";
+function openLog(id){logId=id||"lux";const x=A[logId];document.getElementById("logCover").innerHTML=cover(logId);document.getElementById("logTitle").textContent=x.t;document.getElementById("logArtist").textContent=x.a+" · "+x.y;mkRate("logRate",0);document.getElementById("modal").classList.add("on")}
+function closeLog(){document.getElementById("modal").classList.remove("on")}
+function saveLog(){closeLog();toast("Logged. Your taste match with maya went up 2%.")}
+function toast(t){const e=document.getElementById("toast");e.textContent=t;e.classList.add("on");clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove("on"),2600)}
+document.addEventListener("keydown",e=>{if(e.key=="Escape")closeLog();if(e.key=="l"&&document.activeElement.tagName!="INPUT"&&document.activeElement.tagName!="TEXTAREA")openLog()});
+
+// search: jump to album
+document.getElementById("q").addEventListener("keydown",e=>{if(e.key!="Enter")return;const q=e.target.value.toLowerCase();const hit=Object.keys(A).find(k=>(A[k].t+" "+A[k].a).toLowerCase().includes(q));if(hit)location.hash="album/"+hit;else toast("No match in the beta catalog yet.")});
+
+// ---------- ROUTER ----------
+function route(){
+  const h=location.hash.slice(1)||"home";const [pg,arg]=h.split("/");
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("on"));
+  const el=document.getElementById("p-"+pg)||document.getElementById("p-home");el.classList.add("on");
+  document.querySelectorAll("[data-nav]").forEach(a=>a.classList.toggle("on",a.dataset.nav==pg));
+  if(pg=="album")renderAlbum(arg||"brat");
+  if(pg=="meta")requestAnimationFrame(drawAge);
+  window.scrollTo(0,0);
+}
+addEventListener("hashchange",route);addEventListener("resize",()=>{if(location.hash=="#meta")drawAge()});
+route();
+</script>
+</body>
+</html>
